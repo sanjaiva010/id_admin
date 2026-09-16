@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - QR Scanner</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container admin-container">
+        <header>
+            <h1>Admin Portal</h1>
+            <p class="subtitle">Student QR Code Scanner</p>
+        </header>
+
+        <!-- Stats Dashboard -->
+        <div class="stats-dashboard">
+            <div class="stat-card total">
+                <div class="stat-icon">📊</div>
+                <div class="stat-info">
+                    <span class="stat-number" id="totalScans">0</span>
+                    <span class="stat-label">Total Scanned</span>
+                </div>
+            </div>
+            <div class="stat-card tnce">
+                <div class="stat-icon">🎓</div>
+                <div class="stat-info">
+                    <span class="stat-number" id="tnceCount">0</span>
+                    <span class="stat-label">TNCE</span>
+                </div>
+            </div>
+            <div class="stat-card pcet">
+                <div class="stat-icon">🏫</div>
+                <div class="stat-info">
+                    <span class="stat-number" id="pcetCount">0</span>
+                    <span class="stat-label">PCET</span>
+                </div>
+            </div>
+            <div class="stat-card pct">
+                <div class="stat-icon">🏛️</div>
+                <div class="stat-info">
+                    <span class="stat-number" id="pctCount">0</span>
+                    <span class="stat-label">PCT</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="scanner-section">
+            <div class="scanner-box">
+                <div id="reader"></div>
+                <div class="scanner-controls">
+                    <button id="startScan" class="btn-scan">Start Scanner</button>
+                    <button id="stopScan" class="btn-stop" style="display:none;">Stop Scanner</button>
+                </div>
+            </div>
+
+            <div class="manual-entry">
+                <h3>Or Enter QR Data Manually</h3>
+                <div class="form-group">
+                    <textarea id="manualInput" placeholder="Paste QR code data here..." rows="3"></textarea>
+                </div>
+                <button id="manualScan" class="btn-submit">Process Data</button>
+            </div>
+        </div>
+
+        <!-- Student Details Display - Simplified -->
+        <div id="studentDetails" class="student-details" style="display:none;">
+            <h2>Student Verified</h2>
+            <div class="details-card simplified">
+                <div class="detail-main">
+                    <div class="student-name" id="detailName"></div>
+                    <div class="student-college" id="detailCollege"></div>
+                    <div class="student-course" id="detailCourse"></div>
+                </div>
+                <div class="verification-status">
+                    <span class="status-badge verified">✓ Verified</span>
+                    <span class="scan-time" id="scanTime"></span>
+                </div>
+            </div>
+            <button id="clearDetails" class="btn-clear">Clear & Scan Next</button>
+        </div>
+
+        <!-- Recent Scans -->
+        <div class="scan-history">
+            <h2>Recent Scans</h2>
+            <div id="scanHistory" class="history-list">
+                <p class="no-scans">No scans yet</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/colleges-data.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
