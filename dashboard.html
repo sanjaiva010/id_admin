@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ID Card Manufacturing</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>🏭 ID Card Manufacturing Dashboard</h1>
+                <span class="badge">For ID Card Manufacturers</span>
+            </div>
+            <div class="header-right">
+                <div class="stats-summary">
+                    <div class="stat-mini"><span id="dashTotal">0</span> Total</div>
+                    <div class="stat-mini tnce"><span id="dashTnce">0</span> TNCE</div>
+                    <div class="stat-mini pcet"><span id="dashPcet">0</span> PCET</div>
+                    <div class="stat-mini pct"><span id="dashPct">0</span> PCT</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="🔍 Search name, reg no, email...">
+                </div>
+                <div class="filter-group">
+                    <select id="collegeFilter">
+                        <option value="">All Colleges</option>
+                        <option value="tnce">Tamil Nadu College of Engineering</option>
+                        <option value="pcet">Park College of Engineering and Technology</option>
+                        <option value="pct">Park College of Technology</option>
+                    </select>
+                    <select id="courseFilter">
+                        <option value="">All Courses</option>
+                    </select>
+                    <select id="typeFilter">
+                        <option value="">All Types</option>
+                        <option value="hosteller">Hosteller</option>
+                        <option value="dayscholar">Day Scholar</option>
+                    </select>
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <button id="exportCSV" class="btn btn-export">📥 Export CSV</button>
+                <button id="exportExcel" class="btn btn-export">📊 Export Excel</button>
+                <button id="printAll" class="btn btn-print">🖨️ Print All Cards</button>
+                <button id="refreshBtn" class="btn btn-refresh">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div class="table-container">
+            <table id="studentTable">
+                <thead>
+                    <tr>
+                        <th data-sort="id">ID <span class="sort-icon">↕</span></th>
+                        <th data-sort="name">Student Name <span class="sort-icon">↕</span></th>
+                        <th data-sort="regNo">Reg No <span class="sort-icon">↕</span></th>
+                        <th data-sort="college">College <span class="sort-icon">↕</span></th>
+                        <th data-sort="course">Course <span class="sort-icon">↕</span></th>
+                        <th data-sort="type">Type <span class="sort-icon">↕</span></th>
+                        <th data-sort="bloodGroup">Blood Group</th>
+                        <th data-sort="email">Email</th>
+                        <th data-sort="phone">Phone</th>
+                        <th data-sort="registeredAt">Registered <span class="sort-icon">↕</span></th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Rows inserted here -->
+                </tbody>
+            </table>
+            <div id="emptyState" class="empty-state" style="display:none;">
+                <div class="empty-icon">📋</div>
+                <h3>No Students Registered Yet</h3>
+                <p>Student registrations will appear here automatically</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination">
+            <!-- Page buttons inserted here -->
+        </div>
+
+        <!-- Print Modal for ID Cards -->
+        <div id="printModal" class="modal">
+            <div class="modal-content print-modal-content">
+                <div class="modal-header">
+                    <h2>🖨️ Print ID Cards</h2>
+                    <button class="close-modal" id="closePrintModal">&times;</button>
+                </div>
+                <div class="print-options">
+                    <label>
+                        <input type="radio" name="printMode" value="selected" checked> Selected Students
+                    </label>
+                    <label>
+                        <input type="radio" name="printMode" value="all"> All Filtered Students
+                    </label>
+                    <label>
+                        <input type="radio" name="printMode" value="college"> By College
+                    </label>
+                    <div class="print-layout-select">
+                        <label>Layout: 
+                            <select id="cardLayout">
+                                <option value="a4-8">A4 - 8 Cards (2×4)</option>
+                                <option value="a4-10">A4 - 10 Cards (2×5)</option>
+                                <option value="a4-6">A4 - 6 Cards (2×3) - Larger</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="includeQR" checked> Include QR Codes
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="includePhoto" disabled> Include Photo Placeholder
+                    </label>
+                </div>
+                <div class="print-preview" id="printPreview"></div>
+                <div class="modal-actions">
+                    <button id="generatePrint" class="btn btn-primary">Generate Print Layout</button>
+                    <button id="doPrint" class="btn btn-print" style="display:none;">🖨️ Print / Save as PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Detail Modal -->
+        <div id="detailModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Student Details</h2>
+                    <button class="close-modal" id="closeDetailModal">&times;</button>
+                </div>
+                <div id="detailContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/colleges-data.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
