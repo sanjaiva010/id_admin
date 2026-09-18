@@ -1,150 +1,231 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - ID Card Manufacturing</title>
-    <link rel="stylesheet" href="css/dashboard.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <div class="header-left">
-                <h1>🏭 ID Card Manufacturing Dashboard</h1>
-                <span class="badge">For ID Card Manufacturers</span>
-            </div>
-            <div class="header-right">
-                <div class="stats-summary">
-                    <div class="stat-mini"><span id="dashTotal">0</span> Total</div>
-                    <div class="stat-mini tnce"><span id="dashTnce">0</span> TNCE</div>
-                    <div class="stat-mini pcet"><span id="dashPcet">0</span> PCET</div>
-                    <div class="stat-mini pct"><span id="dashPct">0</span> PCT</div>
-                </div>
-            </div>
-        </header>
+// ============================================================
+// Same Apps Script Web App URL used in js/student.js. This lets the
+// dashboard pull EVERY registration from the central Sheet, instead of
+// only whatever happens to be in this one browser's localStorage.
+// ============================================================
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyouUDjYsCSmGciLqISDgGtdFgt1Ubn91TkpaQ9phN-GGymrPeMvaIXmIFLBYvBWBSX/exec';
 
-        <!-- Toolbar -->
-        <div class="toolbar">
-            <div class="toolbar-left">
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="🔍 Search name, reg no, email...">
-                </div>
-                <div class="filter-group">
-                    <select id="collegeFilter">
-                        <option value="">All Colleges</option>
-                        <option value="tnce">Tamil Nadu College of Engineering</option>
-                        <option value="pcet">Park College of Engineering and Technology</option>
-                        <option value="pct">Park College of Technology</option>
-                    </select>
-                    <select id="courseFilter">
-                        <option value="">All Courses</option>
-                    </select>
-                    <select id="typeFilter">
-                        <option value="">All Types</option>
-                        <option value="hosteller">Hosteller</option>
-                        <option value="dayscholar">Day Scholar</option>
-                    </select>
-                </div>
-            </div>
-            <div class="toolbar-right">
-                <button id="exportCSV" class="btn btn-export">📥 Export CSV</button>
-                <button id="exportExcel" class="btn btn-export">📊 Export Excel</button>
-                <button id="printAll" class="btn btn-print">🖨️ Print All Cards</button>
-                <button id="refreshBtn" class="btn btn-refresh">🔄 Refresh</button>
-            </div>
-        </div>
+// College names for display
+const collegeNames = {
+    tnce: 'Tamil Nadu College of Engineering',
+    pcet: 'Park College of Engineering and Technology',
+    pct: 'Park College of Technology'
+};
 
-        <!-- Main Table -->
-        <div class="table-container">
-            <table id="studentTable">
-                <thead>
-                    <tr>
-                        <th data-sort="id">ID <span class="sort-icon">↕</span></th>
-                        <th data-sort="name">Student Name <span class="sort-icon">↕</span></th>
-                        <th data-sort="regNo">Reg No <span class="sort-icon">↕</span></th>
-                        <th data-sort="college">College <span class="sort-icon">↕</span></th>
-                        <th data-sort="course">Course <span class="sort-icon">↕</span></th>
-                        <th data-sort="type">Type <span class="sort-icon">↕</span></th>
-                        <th data-sort="bloodGroup">Blood Group</th>
-                        <th data-sort="email">Email</th>
-                        <th data-sort="phone">Phone</th>
-                        <th data-sort="registeredAt">Registered <span class="sort-icon">↕</span></th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <!-- Rows inserted here -->
-                </tbody>
-            </table>
-            <div id="emptyState" class="empty-state" style="display:none;">
-                <div class="empty-icon">📋</div>
-                <h3>No Students Registered Yet</h3>
-                <p>Student registrations will appear here automatically</p>
-            </div>
-        </div>
+// In-memory cache of everything fetched from the Sheet (falls back to
+// localStorage if the fetch fails, e.g. offline testing)
+let allStudentsCache = [];
 
-        <!-- Pagination -->
-        <div class="pagination" id="pagination">
-            <!-- Page buttons inserted here -->
-        </div>
+document.addEventListener('DOMContentLoaded', function() {
+    loadStudents();
 
-        <!-- Print Modal for ID Cards -->
-        <div id="printModal" class="modal">
-            <div class="modal-content print-modal-content">
-                <div class="modal-header">
-                    <h2>🖨️ Print ID Cards</h2>
-                    <button class="close-modal" id="closePrintModal">&times;</button>
-                </div>
-                <div class="print-options">
-                    <label>
-                        <input type="radio" name="printMode" value="selected" checked> Selected Students
-                    </label>
-                    <label>
-                        <input type="radio" name="printMode" value="all"> All Filtered Students
-                    </label>
-                    <label>
-                        <input type="radio" name="printMode" value="college"> By College
-                    </label>
-                    <div class="print-layout-select">
-                        <label>Layout: 
-                            <select id="cardLayout">
-                                <option value="a4-8">A4 - 8 Cards (2×4)</option>
-                                <option value="a4-10">A4 - 10 Cards (2×5)</option>
-                                <option value="a4-6">A4 - 6 Cards (2×3) - Larger</option>
-                            </select>
-                        </label>
-                    </div>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="includeQR" checked> Include QR Codes
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="includePhoto" disabled> Include Photo Placeholder
-                    </label>
-                </div>
-                <div class="print-preview" id="printPreview"></div>
-                <div class="modal-actions">
-                    <button id="generatePrint" class="btn btn-primary">Generate Print Layout</button>
-                    <button id="doPrint" class="btn btn-print" style="display:none;">🖨️ Print / Save as PDF</button>
-                </div>
-            </div>
-        </div>
+    document.getElementById('searchInput').addEventListener('input', refreshView);
+    document.getElementById('collegeFilter').addEventListener('change', refreshView);
+    document.getElementById('courseFilter').addEventListener('change', refreshView);
+    document.getElementById('typeFilter').addEventListener('change', refreshView);
+    document.getElementById('exportCSV').addEventListener('click', exportCSV);
+    document.getElementById('exportExcel').addEventListener('click', exportExcel);
 
-        <!-- Student Detail Modal -->
-        <div id="detailModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Student Details</h2>
-                    <button class="close-modal" id="closeDetailModal">&times;</button>
-                </div>
-                <div id="detailContent"></div>
-            </div>
-        </div>
-    </div>
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadStudents);
+    }
+});
 
-    <script src="js/colleges-data.js"></script>
-    <script src="js/dashboard.js"></script>
-</body>
-</html>
+// ---- LOAD DATA FROM APPS SCRIPT (falls back to localStorage) ----
+function loadStudents() {
+    const tbody = document.getElementById('tableBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;">Loading registrations…</td></tr>';
+    }
+
+    fetch(APPS_SCRIPT_URL)
+        .then(function(res) { return res.json(); })
+        .then(function(result) {
+            if (result && result.success) {
+                allStudentsCache = result.students || [];
+            } else {
+                throw new Error((result && result.error) || 'Unknown error fetching students');
+            }
+        })
+        .catch(function(err) {
+            console.error('Failed to fetch from Apps Script, falling back to localStorage:', err);
+            allStudentsCache = JSON.parse(localStorage.getItem('students')) || [];
+        })
+        .finally(function() {
+            refreshView();
+        });
+}
+
+// ---- RENDER TABLE ----
+function renderTable(filteredStudents) {
+    const tbody = document.getElementById('tableBody');
+    const emptyState = document.getElementById('emptyState');
+
+    if (!filteredStudents || filteredStudents.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        document.getElementById('pagination').style.display = 'none';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    document.getElementById('pagination').style.display = 'block';
+
+    let html = '';
+    filteredStudents.forEach(function(student) {
+        const collegeName = collegeNames[student.college] || student.college;
+        const bloodGroup = student.bloodGroup;
+        const typeText = student.studentType === 'hosteller' ? 'Hosteller' : 'Day Scholar';
+        const registeredDate = student.timestamp ? new Date(student.timestamp).toLocaleDateString() : '-';
+        const courseDisplay = student.courseName || student.course;
+
+        html += '<tr class="selectable" onclick="showStudentDetail(\'' + student.id + '\')" style="cursor:pointer;">' +
+                '<td>' + student.id + '</td>' +
+                '<td>' + student.name + '</td>' +
+                '<td>' + student.regNo + '</td>' +
+                '<td><span class="badge-college badge-' + student.college + '">' + collegeName + '</span></td>' +
+                '<td>' + courseDisplay + '</td>' +
+                '<td><span class="badge-type badge-' + student.studentType + '">' + typeText + '</span></td>' +
+                '<td>' + bloodGroup + '</td>' +
+                '<td>' + student.email + '</td>' +
+                '<td>' + (student.studentPhone || '-') + '</td>' +
+                '<td>' + registeredDate + '</td>' +
+                '<td><button class="action-btn btn-view" onclick="event.stopPropagation(); showStudentDetail(\'' + student.id + '\')">View</button></td>' +
+                '</tr>';
+    });
+
+    tbody.innerHTML = html;
+}
+
+// ---- SORT & FILTER ----
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const collegeFilter = document.getElementById('collegeFilter').value;
+    const courseFilter = document.getElementById('courseFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+
+    return allStudentsCache.filter(function(student) {
+        const matchesSearch = (student.name || '').toLowerCase().includes(searchTerm) ||
+                             (student.regNo || '').toLowerCase().includes(searchTerm) ||
+                             (student.email || '').toLowerCase().includes(searchTerm);
+
+        const matchesCollege = !collegeFilter || student.college === collegeFilter;
+        const matchesCourse = !courseFilter || student.course === courseFilter;
+        const matchesType = !typeFilter || student.studentType === typeFilter;
+
+        return matchesSearch && matchesCollege && matchesCourse && matchesType;
+    });
+}
+
+function refreshView() {
+    const filtered = applyFilters();
+    renderTable(filtered);
+    updatePagination(filtered);
+    updateStats();
+}
+
+// ---- EXPORT ----
+function exportCSV() {
+    const students = applyFilters();
+    if (students.length === 0) {
+        alert('No students to export after filters.');
+        return;
+    }
+
+    const headers = ['ID', 'Name', 'Reg No', 'College', 'Course', 'Type', 'Blood Group', 'Email', 'Phone', 'Registered Date'];
+    const rows = students.map(function(s) {
+        return [
+            s.id,
+            s.name,
+            s.regNo,
+            collegeNames[s.college] || s.college,
+            s.courseName || s.course,
+            s.studentType === 'hosteller' ? 'Hosteller' : 'Day Scholar',
+            s.bloodGroup,
+            s.email,
+            s.studentPhone || '-',
+            s.timestamp ? new Date(s.timestamp).toLocaleDateString() : '-'
+        ];
+    });
+
+    const csv = [headers, ...rows].map(function(row) {
+        return row.map(function(cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'students-export.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function exportExcel() {
+    exportCSV(); // Same data, different format hint
+}
+
+// ---- STATS UPDATE ----
+function updateStats() {
+    document.getElementById('dashTotal').textContent = allStudentsCache.length;
+
+    const tnce = allStudentsCache.filter(function(s) { return s.college === 'tnce'; }).length;
+    const pcet = allStudentsCache.filter(function(s) { return s.college === 'pcet'; }).length;
+    const pct = allStudentsCache.filter(function(s) { return s.college === 'pct'; }).length;
+
+    document.getElementById('dashTnce').textContent = tnce;
+    document.getElementById('dashPcet').textContent = pcet;
+    document.getElementById('dashPct').textContent = pct;
+}
+
+// ---- PAGINATION ----
+function updatePagination(filteredStudents) {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '<span class="page-info">Showing ' + filteredStudents.length + ' students</span>';
+}
+
+// ---- SHOW STUDENT DETAIL ----
+function showStudentDetail(id) {
+    const student = allStudentsCache.find(function(s) { return String(s.id) === String(id); });
+    if (!student) return;
+
+    const collegeName = collegeNames[student.college] || student.college;
+    const typeText = student.studentType === 'hosteller' ? 'Hosteller' : 'Day Scholar';
+    const registeredDate = student.timestamp ? new Date(student.timestamp).toLocaleDateString() : '-';
+    const registeredTime = student.timestamp ? new Date(student.timestamp).toLocaleTimeString() : '-';
+
+    const html = '<div class="detail-grid">' +
+        '<div class="detail-card"><h4>🆔 Student ID</h4><p>' + student.id + '</p></div>' +
+        '<div class="detail-card"><h4>👤 Name</h4><p>' + student.name + '</p></div>' +
+        '<div class="detail-card"><h4>📝 Reg No</h4><p>' + student.regNo + '</p></div>' +
+        '<div class="detail-card"><h4>🎓 College</h4><p>' + collegeName + '</p></div>' +
+        '<div class="detail-card"><h4>📚 Course</h4><p>' + (student.courseName || student.course) + '</p></div>' +
+        '<div class="detail-card"><h4>👥 Type</h4><p>' + typeText + '</p></div>' +
+        '<div class="detail-card"><h4>💊 Blood Group</h4><p>' + student.bloodGroup + '</p></div>' +
+        '<div class="detail-card"><h4>📧 Email</h4><p>' + student.email + '</p></div>' +
+        '<div class="detail-card"><h4>📱 Phone</h4><p>' + (student.studentPhone || 'Not provided') + '</p></div>' +
+        '<div class="detail-card"><h4>🏠 Address</h4><p>' + (student.address || 'Not provided') + '</p></div>' +
+        '<div class="detail-card"><h4>📞 Father\'s Phone</h4><p>' + (student.dadPhone || 'Not provided') + '</p></div>' +
+        '<div class="detail-card"><h4>📅 Registered</h4><p>' + registeredDate + '</p><p>' + registeredTime + '</p></div>' +
+        (student.emailStatus ? '<div class="detail-card"><h4>📧 Email Status</h4><p>' + student.emailStatus + '</p></div>' : '') +
+        '</div>';
+
+    document.getElementById('detailContent').innerHTML = html;
+    document.getElementById('detailModal').style.display = 'block';
+}
+
+// ---- CLOSE MODALS ----
+window.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+        document.getElementById('detailModal').style.display = 'none';
+        document.getElementById('printModal').style.display = 'none';
+    }
+});
+
+document.querySelectorAll('.close-modal').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.getElementById('detailModal').style.display = 'none';
+        document.getElementById('printModal').style.display = 'none';
+    });
+});
